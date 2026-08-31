@@ -8,7 +8,22 @@ from typing import Dict, Iterable, List
 Program = List[dict]
 
 
+def validate(program: Iterable[dict]) -> None:
+    defined = set()
+    for node in program:
+        for name in node.get("args", []):
+            if name not in defined:
+                raise ValueError(f"use before definition: {name}")
+        output = node.get("out")
+        if output is not None:
+            if output in defined:
+                raise ValueError(f"duplicate output: {output}")
+            defined.add(output)
+
+
 def run(program: Iterable[dict]) -> float:
+    program = list(program)
+    validate(program)
     values: Dict[str, float] = {}
     for node in program:
         op = node["op"]
@@ -56,6 +71,8 @@ def eliminate_dead_code(program: Iterable[dict]) -> Program:
 
 
 def optimize(program: Iterable[dict]) -> Program:
+    program = list(program)
+    validate(program)
     return eliminate_dead_code(constant_fold(program))
 
 
@@ -70,4 +87,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

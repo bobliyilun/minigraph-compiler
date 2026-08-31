@@ -25,7 +25,18 @@ class CompilerTests(unittest.TestCase):
         reduced = eliminate_dead_code(PROGRAM)
         self.assertEqual([node.get("out") for node in reduced], ["x", "y", "sum", None])
 
+    def test_rejects_use_before_definition(self):
+        with self.assertRaisesRegex(ValueError, "use before definition: x"):
+            run([{"op": "return", "args": ["x"]}])
+
+    def test_rejects_duplicate_outputs(self):
+        with self.assertRaisesRegex(ValueError, "duplicate output: x"):
+            optimize([
+                {"op": "const", "out": "x", "value": 1},
+                {"op": "const", "out": "x", "value": 2},
+                {"op": "return", "args": ["x"]},
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()
-
