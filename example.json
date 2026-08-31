@@ -1,0 +1,8 @@
+[
+  {"op": "const", "out": "x", "value": 2},
+  {"op": "const", "out": "y", "value": 3},
+  {"op": "add", "out": "sum", "args": ["x", "y"]},
+  {"op": "mul", "out": "unused", "args": ["x", "y"]},
+  {"op": "return", "args": ["sum"]}
+]
+

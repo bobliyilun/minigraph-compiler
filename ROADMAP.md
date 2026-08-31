@@ -1,0 +1,23 @@
+# Roadmap
+
+- [x] Executable JSON-compatible SSA-style IR
+- [x] Constant-folding pass
+- [x] Dead-code-elimination pass with semantic tests
+- [ ] Validate use-before-definition and duplicate outputs
+- [ ] Add subtraction and division operators
+- [ ] Add comparison and select operators
+- [ ] Add shape and dtype metadata
+- [ ] Add tensor constants and elementwise broadcasting
+- [ ] Add common-subexpression elimination
+- [ ] Add algebraic simplification identities
+- [ ] Add constant propagation through aliases
+- [ ] Add liveness analysis report
+- [ ] Add topological sorting and cycle diagnostics
+- [ ] Add pass-manager fixed-point tracing
+- [ ] Add textual IR parser and printer
+- [ ] Add Graphviz export
+- [ ] Add pattern-based operator fusion
+- [ ] Add memory-slot reuse analysis
+- [ ] Add a simple stack-machine lowering target
+- [ ] Publish before/after optimization examples and pass statistics
+
