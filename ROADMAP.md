@@ -4,7 +4,7 @@
 - [x] Constant-folding pass
 - [x] Dead-code-elimination pass with semantic tests
 - [x] Validate use-before-definition and duplicate outputs
-- [ ] Add subtraction and division operators
+- [x] Add subtraction and division operators
 - [ ] Add comparison and select operators
 - [ ] Add shape and dtype metadata
 - [ ] Add tensor constants and elementwise broadcasting

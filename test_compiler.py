@@ -25,6 +25,22 @@ class CompilerTests(unittest.TestCase):
         reduced = eliminate_dead_code(PROGRAM)
         self.assertEqual([node.get("out") for node in reduced], ["x", "y", "sum", None])
 
+    def test_subtraction_and_division_fold(self):
+        program = [
+            {"op": "const", "out": "x", "value": 9},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "sub", "out": "difference", "args": ["x", "y"]},
+            {"op": "div", "out": "quotient", "args": ["difference", "y"]},
+            {"op": "return", "args": ["quotient"]},
+        ]
+        optimized = optimize(program)
+        self.assertEqual(run(program), 2.0)
+        self.assertEqual(run(optimized), 2.0)
+        self.assertEqual(optimized, [
+            {"op": "const", "out": "quotient", "value": 2.0},
+            {"op": "return", "args": ["quotient"]},
+        ])
+
     def test_rejects_use_before_definition(self):
         with self.assertRaisesRegex(ValueError, "use before definition: x"):
             run([{"op": "return", "args": ["x"]}])

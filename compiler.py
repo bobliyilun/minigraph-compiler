@@ -29,9 +29,16 @@ def run(program: Iterable[dict]) -> float:
         op = node["op"]
         if op == "const":
             values[node["out"]] = float(node["value"])
-        elif op in {"add", "mul"}:
+        elif op in {"add", "sub", "mul", "div"}:
             left, right = (values[name] for name in node["args"])
-            values[node["out"]] = left + right if op == "add" else left * right
+            if op == "add":
+                values[node["out"]] = left + right
+            elif op == "sub":
+                values[node["out"]] = left - right
+            elif op == "mul":
+                values[node["out"]] = left * right
+            else:
+                values[node["out"]] = left / right
         elif op == "return":
             return values[node["args"][0]]
         else:
@@ -46,9 +53,16 @@ def constant_fold(program: Iterable[dict]) -> Program:
         node = dict(original)
         if node["op"] == "const":
             constants[node["out"]] = float(node["value"])
-        elif node["op"] in {"add", "mul"} and all(name in constants for name in node["args"]):
+        elif node["op"] in {"add", "sub", "mul", "div"} and all(name in constants for name in node["args"]):
             left, right = (constants[name] for name in node["args"])
-            value = left + right if node["op"] == "add" else left * right
+            if node["op"] == "add":
+                value = left + right
+            elif node["op"] == "sub":
+                value = left - right
+            elif node["op"] == "mul":
+                value = left * right
+            else:
+                value = left / right
             node = {"op": "const", "out": node["out"], "value": value}
             constants[node["out"]] = value
         output.append(node)
