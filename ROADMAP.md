@@ -5,7 +5,7 @@
 - [x] Dead-code-elimination pass with semantic tests
 - [x] Validate use-before-definition and duplicate outputs
 - [x] Add subtraction and division operators
-- [ ] Add comparison and select operators
+- [x] Add comparison and select operators
 - [ ] Add shape and dtype metadata
 - [ ] Add tensor constants and elementwise broadcasting
 - [ ] Add common-subexpression elimination
