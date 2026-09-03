@@ -13,3 +13,6 @@ python3 -m unittest -v
 
 See [ROADMAP.md](ROADMAP.md) for planned IR, analysis, and lowering passes.
 
+Every scalar value has inferred metadata: `shape` is `[]`, and `dtype` is
+`"float"` or `"bool"`. Constants may state matching `dtype` and `shape`
+metadata explicitly; incompatible operator inputs are rejected.

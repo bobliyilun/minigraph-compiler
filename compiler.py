@@ -3,13 +3,53 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Union
+from typing import Dict, Iterable, List, Tuple, Union
 
 Program = List[dict]
 Value = Union[bool, float]
+Metadata = Tuple[Tuple[int, ...], str]
+
+
+def _const_metadata(node: dict) -> Metadata:
+    value = node["value"]
+    dtype = "bool" if isinstance(value, bool) else "float"
+    if node.get("dtype", dtype) != dtype:
+        raise ValueError(f"constant dtype does not match value: {node['out']}")
+    shape = tuple(node.get("shape", []))
+    if any(not isinstance(size, int) or isinstance(size, bool) or size < 0 for size in shape):
+        raise ValueError(f"invalid shape: {node['out']}")
+    if shape:
+        raise ValueError("tensor constants are not supported yet")
+    return shape, dtype
+
+
+def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
+    """Return each SSA value's ``(shape, dtype)`` metadata."""
+    metadata: Dict[str, Metadata] = {}
+    for node in program:
+        op = node["op"]
+        if op == "const":
+            metadata[node["out"]] = _const_metadata(node)
+        elif op in {"add", "sub", "mul", "div"}:
+            left, right = (metadata[name] for name in node["args"])
+            if left != right or left[1] != "float":
+                raise ValueError(f"arithmetic requires matching float inputs: {node['out']}")
+            metadata[node["out"]] = left
+        elif op in {"eq", "lt", "gt"}:
+            left, right = (metadata[name] for name in node["args"])
+            if left != right:
+                raise ValueError(f"comparison requires matching inputs: {node['out']}")
+            metadata[node["out"]] = left[0], "bool"
+        elif op == "select":
+            condition, when_true, when_false = (metadata[name] for name in node["args"])
+            if condition != ((), "bool") or when_true != when_false:
+                raise ValueError(f"select requires a scalar boolean and matching choices: {node['out']}")
+            metadata[node["out"]] = when_true
+    return metadata
 
 
 def validate(program: Iterable[dict]) -> None:
+    program = list(program)
     defined = set()
     for node in program:
         for name in node.get("args", []):
@@ -20,6 +60,7 @@ def validate(program: Iterable[dict]) -> None:
             if output in defined:
                 raise ValueError(f"duplicate output: {output}")
             defined.add(output)
+    infer_metadata(program)
 
 
 def run(program: Iterable[dict]) -> Value:

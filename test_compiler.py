@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import eliminate_dead_code, optimize, run
+from compiler import eliminate_dead_code, infer_metadata, optimize, run
 
 
 PROGRAM = [
@@ -78,6 +78,28 @@ class CompilerTests(unittest.TestCase):
                 {"op": "const", "out": "x", "value": 1},
                 {"op": "const", "out": "x", "value": 2},
                 {"op": "return", "args": ["x"]},
+            ])
+
+    def test_infers_scalar_shape_and_dtype(self):
+        program = [
+            {"op": "const", "out": "x", "value": 2},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "lt", "out": "condition", "args": ["x", "y"]},
+            {"op": "return", "args": ["condition"]},
+        ]
+        self.assertEqual(infer_metadata(program), {
+            "x": ((), "float"),
+            "y": ((), "float"),
+            "condition": ((), "bool"),
+        })
+
+    def test_rejects_incompatible_metadata(self):
+        with self.assertRaisesRegex(ValueError, "constant dtype does not match value"):
+            optimize([
+                {"op": "const", "out": "x", "value": 1, "dtype": "bool"},
+                {"op": "const", "out": "y", "value": 2},
+                {"op": "add", "out": "sum", "args": ["x", "y"]},
+                {"op": "return", "args": ["sum"]},
             ])
 
 
