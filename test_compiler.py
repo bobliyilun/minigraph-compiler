@@ -117,6 +117,45 @@ class CompilerTests(unittest.TestCase):
                 {"op": "return", "args": ["matrix"]},
             ])
 
+    def test_broadcasts_tensor_arithmetic_and_folds(self):
+        program = [
+            {"op": "const", "out": "matrix", "value": [[1, 2, 3], [4, 5, 6]]},
+            {"op": "const", "out": "column", "value": [[10], [20]]},
+            {"op": "add", "out": "result", "args": ["matrix", "column"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        expected = [[11.0, 12.0, 13.0], [24.0, 25.0, 26.0]]
+        self.assertEqual(run(program), expected)
+        self.assertEqual(infer_metadata(program)["result"], ((2, 3), "float"))
+        self.assertEqual(run(optimize(program)), expected)
+
+        row_program = [
+            {"op": "const", "out": "matrix", "value": [[1, 2, 3], [4, 5, 6]]},
+            {"op": "const", "out": "row", "value": [10, 20, 30]},
+            {"op": "add", "out": "result", "args": ["matrix", "row"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        self.assertEqual(run(row_program), [[11.0, 22.0, 33.0], [14.0, 25.0, 36.0]])
+
+    def test_broadcasts_scalar_comparison(self):
+        program = [
+            {"op": "const", "out": "values", "value": [1, 2]},
+            {"op": "const", "out": "limit", "value": 2},
+            {"op": "lt", "out": "result", "args": ["values", "limit"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        self.assertEqual(run(program), [True, False])
+        self.assertEqual(infer_metadata(program)["result"], ((2,), "bool"))
+
+    def test_rejects_incompatible_broadcast_shapes(self):
+        with self.assertRaisesRegex(ValueError, "cannot be broadcast"):
+            run([
+                {"op": "const", "out": "left", "value": [1, 2]},
+                {"op": "const", "out": "right", "value": [1, 2, 3]},
+                {"op": "add", "out": "result", "args": ["left", "right"]},
+                {"op": "return", "args": ["result"]},
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()

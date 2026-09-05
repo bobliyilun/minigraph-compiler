@@ -43,6 +43,47 @@ def _constant_value(value: object) -> Value:
     return value if isinstance(value, bool) else float(value)
 
 
+def _broadcast_shape(left: Tuple[int, ...], right: Tuple[int, ...]) -> Tuple[int, ...]:
+    result = []
+    for left_size, right_size in zip(reversed(left), reversed(right)):
+        if left_size != right_size and left_size != 1 and right_size != 1:
+            raise ValueError("inputs cannot be broadcast together")
+        result.append(max(left_size, right_size))
+    longer = left if len(left) > len(right) else right
+    return longer[:abs(len(left) - len(right))] + tuple(reversed(result))
+
+
+def _elementwise(left: Value, right: Value, operation):
+    left_shape, _ = _value_metadata(left)
+    right_shape, _ = _value_metadata(right)
+    shape = _broadcast_shape(left_shape, right_shape)
+
+    def value_at(value, value_shape, coordinates):
+        for size, coordinate in zip(value_shape, coordinates[-len(value_shape):]):
+            value = value[0 if size == 1 else coordinate]
+        return value
+
+    def build(coordinates=()):
+        if len(coordinates) == len(shape):
+            return operation(value_at(left, left_shape, coordinates), value_at(right, right_shape, coordinates))
+        return [build(coordinates + (index,)) for index in range(shape[len(coordinates)])]
+
+    return build()
+
+
+def _apply_binary(op: str, left: Value, right: Value) -> Value:
+    operations = {
+        "add": lambda a, b: a + b,
+        "sub": lambda a, b: a - b,
+        "mul": lambda a, b: a * b,
+        "div": lambda a, b: a / b,
+        "eq": lambda a, b: a == b,
+        "lt": lambda a, b: a < b,
+        "gt": lambda a, b: a > b,
+    }
+    return _elementwise(left, right, operations[op])
+
+
 def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
     """Return each SSA value's ``(shape, dtype)`` metadata."""
     metadata: Dict[str, Metadata] = {}
@@ -52,14 +93,14 @@ def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
             metadata[node["out"]] = _const_metadata(node)
         elif op in {"add", "sub", "mul", "div"}:
             left, right = (metadata[name] for name in node["args"])
-            if left != right or left[1] != "float":
-                raise ValueError(f"arithmetic requires matching float inputs: {node['out']}")
-            metadata[node["out"]] = left
+            if left[1] != right[1] or left[1] != "float":
+                raise ValueError(f"arithmetic requires float inputs: {node['out']}")
+            metadata[node["out"]] = _broadcast_shape(left[0], right[0]), "float"
         elif op in {"eq", "lt", "gt"}:
             left, right = (metadata[name] for name in node["args"])
-            if left != right:
+            if left[1] != right[1]:
                 raise ValueError(f"comparison requires matching inputs: {node['out']}")
-            metadata[node["out"]] = left[0], "bool"
+            metadata[node["out"]] = _broadcast_shape(left[0], right[0]), "bool"
         elif op == "select":
             condition, when_true, when_false = (metadata[name] for name in node["args"])
             if condition != ((), "bool") or when_true != when_false:
@@ -93,20 +134,7 @@ def run(program: Iterable[dict]) -> Value:
             values[node["out"]] = _constant_value(node["value"])
         elif op in {"add", "sub", "mul", "div", "eq", "lt", "gt"}:
             left, right = (values[name] for name in node["args"])
-            if op == "add":
-                values[node["out"]] = left + right
-            elif op == "sub":
-                values[node["out"]] = left - right
-            elif op == "mul":
-                values[node["out"]] = left * right
-            elif op == "eq":
-                values[node["out"]] = left == right
-            elif op == "lt":
-                values[node["out"]] = left < right
-            elif op == "gt":
-                values[node["out"]] = left > right
-            else:
-                values[node["out"]] = left / right
+            values[node["out"]] = _apply_binary(op, left, right)
         elif op == "select":
             condition, when_true, when_false = (values[name] for name in node["args"])
             values[node["out"]] = when_true if condition else when_false
@@ -123,23 +151,10 @@ def constant_fold(program: Iterable[dict]) -> Program:
     for original in program:
         node = dict(original)
         if node["op"] == "const":
-            constants[node["out"]] = node["value"] if isinstance(node["value"], bool) else float(node["value"])
+            constants[node["out"]] = _constant_value(node["value"])
         elif node["op"] in {"add", "sub", "mul", "div", "eq", "lt", "gt"} and all(name in constants for name in node["args"]):
             left, right = (constants[name] for name in node["args"])
-            if node["op"] == "add":
-                value = left + right
-            elif node["op"] == "sub":
-                value = left - right
-            elif node["op"] == "mul":
-                value = left * right
-            elif node["op"] == "eq":
-                value = left == right
-            elif node["op"] == "lt":
-                value = left < right
-            elif node["op"] == "gt":
-                value = left > right
-            else:
-                value = left / right
+            value = _apply_binary(node["op"], left, right)
             node = {"op": "const", "out": node["out"], "value": value}
             constants[node["out"]] = value
         elif node["op"] == "select" and all(name in constants for name in node["args"]):

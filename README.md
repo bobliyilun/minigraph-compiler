@@ -19,5 +19,6 @@ metadata explicitly; incompatible operator inputs are rejected.
 
 Constants may also be non-empty rectangular JSON arrays. Their shape and dtype
 are inferred recursively (for example, `[[1, 2], [3, 4]]` is a `float`
-tensor with shape `[2, 2]`). Elementwise tensor operations and broadcasting
-are planned next.
+tensor with shape `[2, 2]`). Arithmetic and comparisons are elementwise and
+follow NumPy-style broadcasting: dimensions must match or one side must be
+`1`; scalars broadcast to every element.
