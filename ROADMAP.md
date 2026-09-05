@@ -7,7 +7,8 @@
 - [x] Add subtraction and division operators
 - [x] Add comparison and select operators
 - [x] Add shape and dtype metadata
-- [ ] Add tensor constants and elementwise broadcasting
+- [x] Add tensor constants
+- [ ] Add elementwise broadcasting
 - [ ] Add common-subexpression elimination
 - [ ] Add algebraic simplification identities
 - [ ] Add constant propagation through aliases

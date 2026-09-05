@@ -102,6 +102,21 @@ class CompilerTests(unittest.TestCase):
                 {"op": "return", "args": ["sum"]},
             ])
 
+    def test_runs_tensor_constant_and_infers_metadata(self):
+        program = [
+            {"op": "const", "out": "matrix", "value": [[1, 2], [3, 4]]},
+            {"op": "return", "args": ["matrix"]},
+        ]
+        self.assertEqual(run(program), [[1.0, 2.0], [3.0, 4.0]])
+        self.assertEqual(infer_metadata(program)["matrix"], ((2, 2), "float"))
+
+    def test_rejects_ragged_tensor_constant(self):
+        with self.assertRaisesRegex(ValueError, "rectangular"):
+            run([
+                {"op": "const", "out": "matrix", "value": [[1, 2], [3]]},
+                {"op": "return", "args": ["matrix"]},
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()

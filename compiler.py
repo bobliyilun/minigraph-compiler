@@ -6,21 +6,41 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Tuple, Union
 
 Program = List[dict]
-Value = Union[bool, float]
+Value = Union[bool, float, list]
 Metadata = Tuple[Tuple[int, ...], str]
 
 
 def _const_metadata(node: dict) -> Metadata:
     value = node["value"]
-    dtype = "bool" if isinstance(value, bool) else "float"
+    shape, dtype = _value_metadata(value)
     if node.get("dtype", dtype) != dtype:
         raise ValueError(f"constant dtype does not match value: {node['out']}")
-    shape = tuple(node.get("shape", []))
-    if any(not isinstance(size, int) or isinstance(size, bool) or size < 0 for size in shape):
+    declared_shape = tuple(node.get("shape", shape))
+    if any(not isinstance(size, int) or isinstance(size, bool) or size < 0 for size in declared_shape):
         raise ValueError(f"invalid shape: {node['out']}")
-    if shape:
-        raise ValueError("tensor constants are not supported yet")
+    if declared_shape != shape:
+        raise ValueError(f"constant shape does not match value: {node['out']}")
     return shape, dtype
+
+
+def _value_metadata(value: object) -> Metadata:
+    if isinstance(value, bool):
+        return (), "bool"
+    if isinstance(value, (int, float)):
+        return (), "float"
+    if not isinstance(value, list) or not value:
+        raise ValueError("constant must be a scalar or non-empty rectangular tensor")
+    child_metadata = [_value_metadata(child) for child in value]
+    if len(set(child_metadata)) != 1:
+        raise ValueError("tensor constant must be rectangular with one dtype")
+    child_shape, dtype = child_metadata[0]
+    return (len(value),) + child_shape, dtype
+
+
+def _constant_value(value: object) -> Value:
+    if isinstance(value, list):
+        return [_constant_value(child) for child in value]
+    return value if isinstance(value, bool) else float(value)
 
 
 def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
@@ -70,7 +90,7 @@ def run(program: Iterable[dict]) -> Value:
     for node in program:
         op = node["op"]
         if op == "const":
-            values[node["out"]] = node["value"] if isinstance(node["value"], bool) else float(node["value"])
+            values[node["out"]] = _constant_value(node["value"])
         elif op in {"add", "sub", "mul", "div", "eq", "lt", "gt"}:
             left, right = (values[name] for name in node["args"])
             if op == "add":
