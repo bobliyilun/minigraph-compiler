@@ -181,10 +181,31 @@ def eliminate_dead_code(program: Iterable[dict]) -> Program:
     return list(reversed(kept))
 
 
+def common_subexpression_elimination(program: Iterable[dict]) -> Program:
+    """Reuse the first output of each identical pure expression."""
+    expressions: Dict[tuple, str] = {}
+    aliases: Dict[str, str] = {}
+    output: Program = []
+    for original in program:
+        node = dict(original)
+        if "args" in node:
+            node["args"] = [aliases.get(name, name) for name in node["args"]]
+        if node["op"] == "return":
+            output.append(node)
+            continue
+        key = node["op"], tuple(node.get("args", [])), repr(node.get("value"))
+        if key in expressions:
+            aliases[node["out"]] = expressions[key]
+        else:
+            expressions[key] = node["out"]
+            output.append(node)
+    return output
+
+
 def optimize(program: Iterable[dict]) -> Program:
     program = list(program)
     validate(program)
-    return eliminate_dead_code(constant_fold(program))
+    return eliminate_dead_code(constant_fold(common_subexpression_elimination(program)))
 
 
 def main() -> None:

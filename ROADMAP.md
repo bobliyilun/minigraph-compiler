@@ -9,7 +9,7 @@
 - [x] Add shape and dtype metadata
 - [x] Add tensor constants
 - [x] Add elementwise broadcasting
-- [ ] Add common-subexpression elimination
+- [x] Add common-subexpression elimination
 - [ ] Add algebraic simplification identities
 - [ ] Add constant propagation through aliases
 - [ ] Add liveness analysis report

@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import eliminate_dead_code, infer_metadata, optimize, run
+from compiler import common_subexpression_elimination, eliminate_dead_code, infer_metadata, optimize, run
 
 
 PROGRAM = [
@@ -155,6 +155,20 @@ class CompilerTests(unittest.TestCase):
                 {"op": "add", "out": "result", "args": ["left", "right"]},
                 {"op": "return", "args": ["result"]},
             ])
+
+    def test_eliminates_common_subexpressions_and_rewrites_uses(self):
+        program = [
+            {"op": "const", "out": "x", "value": 2},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "add", "out": "first", "args": ["x", "y"]},
+            {"op": "add", "out": "second", "args": ["x", "y"]},
+            {"op": "mul", "out": "result", "args": ["first", "second"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        reduced = common_subexpression_elimination(program)
+        self.assertEqual([node.get("out") for node in reduced], ["x", "y", "first", "result", None])
+        self.assertEqual(reduced[-2]["args"], ["first", "first"])
+        self.assertEqual(run(program), run(reduced))
 
 
 if __name__ == "__main__":

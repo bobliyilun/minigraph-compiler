@@ -1,6 +1,6 @@
 # minigraph-compiler
 
-A tiny, executable computation-graph compiler for studying optimization passes. Programs use a JSON-compatible SSA-like intermediate representation; the current optimizer performs constant folding and dead-code elimination, then verifies semantics with an interpreter.
+A tiny, executable computation-graph compiler for studying optimization passes. Programs use a JSON-compatible SSA-like intermediate representation; the current optimizer performs common-subexpression elimination, constant folding, and dead-code elimination, then verifies semantics with an interpreter.
 
 This is an educational compiler lab, not a production graph runtime.
 
