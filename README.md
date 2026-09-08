@@ -22,3 +22,6 @@ are inferred recursively (for example, `[[1, 2], [3, 4]]` is a `float`
 tensor with shape `[2, 2]`). Arithmetic and comparisons are elementwise and
 follow NumPy-style broadcasting: dimensions must match or one side must be
 `1`; scalars broadcast to every element.
+
+`alias` creates an SSA name for one existing value. The optimizer removes alias
+chains, allowing constants to reach later folding passes.

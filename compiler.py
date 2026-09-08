@@ -106,6 +106,8 @@ def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
             if condition != ((), "bool") or when_true != when_false:
                 raise ValueError(f"select requires a scalar boolean and matching choices: {node['out']}")
             metadata[node["out"]] = when_true
+        elif op == "alias":
+            metadata[node["out"]] = metadata[node["args"][0]]
     return metadata
 
 
@@ -138,6 +140,8 @@ def run(program: Iterable[dict]) -> Value:
         elif op == "select":
             condition, when_true, when_false = (values[name] for name in node["args"])
             values[node["out"]] = when_true if condition else when_false
+        elif op == "alias":
+            values[node["out"]] = values[node["args"][0]]
         elif op == "return":
             return values[node["args"][0]]
         else:
@@ -179,6 +183,21 @@ def eliminate_dead_code(program: Iterable[dict]) -> Program:
             live.update(node.get("args", []))
             kept.append(node)
     return list(reversed(kept))
+
+
+def constant_propagate(program: Iterable[dict]) -> Program:
+    """Remove aliases, letting their constant sources reach later operations."""
+    aliases: Dict[str, str] = {}
+    output: Program = []
+    for original in program:
+        node = dict(original)
+        if "args" in node:
+            node["args"] = [aliases.get(name, name) for name in node["args"]]
+        if node["op"] == "alias":
+            aliases[node["out"]] = node["args"][0]
+        else:
+            output.append(node)
+    return output
 
 
 def common_subexpression_elimination(program: Iterable[dict]) -> Program:
@@ -235,7 +254,7 @@ def algebraic_simplify(program: Iterable[dict]) -> Program:
 def optimize(program: Iterable[dict]) -> Program:
     program = list(program)
     validate(program)
-    return eliminate_dead_code(constant_fold(algebraic_simplify(common_subexpression_elimination(program))))
+    return eliminate_dead_code(constant_fold(constant_propagate(algebraic_simplify(common_subexpression_elimination(program)))))
 
 
 def main() -> None:

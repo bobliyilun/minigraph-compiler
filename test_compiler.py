@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, eliminate_dead_code, infer_metadata, optimize, run
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, optimize, run
 
 
 PROGRAM = [
@@ -187,6 +187,23 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(optimize(program), [
             {"op": "const", "out": "x", "value": 4},
             {"op": "return", "args": ["x"]},
+        ])
+
+    def test_propagates_constants_through_aliases(self):
+        program = [
+            {"op": "const", "out": "x", "value": 2},
+            {"op": "alias", "out": "x_copy", "args": ["x"]},
+            {"op": "alias", "out": "x_again", "args": ["x_copy"]},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "add", "out": "result", "args": ["x_again", "y"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        propagated = constant_propagate(program)
+        self.assertEqual(propagated[-2]["args"], ["x", "y"])
+        self.assertEqual(run(program), run(propagated))
+        self.assertEqual(optimize(program), [
+            {"op": "const", "out": "result", "value": 5.0},
+            {"op": "return", "args": ["result"]},
         ])
 
 
