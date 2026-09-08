@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import common_subexpression_elimination, eliminate_dead_code, infer_metadata, optimize, run
+from compiler import algebraic_simplify, common_subexpression_elimination, eliminate_dead_code, infer_metadata, optimize, run
 
 
 PROGRAM = [
@@ -169,6 +169,25 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual([node.get("out") for node in reduced], ["x", "y", "first", "result", None])
         self.assertEqual(reduced[-2]["args"], ["first", "first"])
         self.assertEqual(run(program), run(reduced))
+
+    def test_simplifies_arithmetic_identities_and_rewrites_uses(self):
+        program = [
+            {"op": "const", "out": "x", "value": 4},
+            {"op": "const", "out": "zero", "value": 0},
+            {"op": "const", "out": "one", "value": 1},
+            {"op": "add", "out": "plus_zero", "args": ["x", "zero"]},
+            {"op": "sub", "out": "minus_zero", "args": ["plus_zero", "zero"]},
+            {"op": "mul", "out": "times_one", "args": ["one", "minus_zero"]},
+            {"op": "div", "out": "result", "args": ["times_one", "one"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        simplified = algebraic_simplify(program)
+        self.assertEqual(simplified[-1]["args"], ["x"])
+        self.assertEqual(run(program), run(simplified))
+        self.assertEqual(optimize(program), [
+            {"op": "const", "out": "x", "value": 4},
+            {"op": "return", "args": ["x"]},
+        ])
 
 
 if __name__ == "__main__":

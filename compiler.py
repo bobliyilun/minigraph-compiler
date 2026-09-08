@@ -202,10 +202,40 @@ def common_subexpression_elimination(program: Iterable[dict]) -> Program:
     return output
 
 
+def algebraic_simplify(program: Iterable[dict]) -> Program:
+    """Eliminate arithmetic identities whose constant operand is scalar."""
+    constants: Dict[str, Value] = {}
+    aliases: Dict[str, str] = {}
+    output: Program = []
+    for original in program:
+        node = dict(original)
+        if "args" in node:
+            node["args"] = [aliases.get(name, name) for name in node["args"]]
+        if node["op"] == "const":
+            constants[node["out"]] = _constant_value(node["value"])
+            output.append(node)
+            continue
+        if node["op"] in {"add", "sub", "mul", "div"}:
+            left, right = node["args"]
+            left_value, right_value = constants.get(left), constants.get(right)
+            replacement = None
+            if node["op"] == "add" and right_value == 0 or node["op"] == "sub" and right_value == 0:
+                replacement = left
+            elif node["op"] == "add" and left_value == 0 or node["op"] == "mul" and left_value == 1:
+                replacement = right
+            elif node["op"] == "mul" and right_value == 1 or node["op"] == "div" and right_value == 1:
+                replacement = left
+            if replacement is not None:
+                aliases[node["out"]] = replacement
+                continue
+        output.append(node)
+    return output
+
+
 def optimize(program: Iterable[dict]) -> Program:
     program = list(program)
     validate(program)
-    return eliminate_dead_code(constant_fold(common_subexpression_elimination(program)))
+    return eliminate_dead_code(constant_fold(algebraic_simplify(common_subexpression_elimination(program))))
 
 
 def main() -> None:

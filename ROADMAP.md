@@ -10,7 +10,7 @@
 - [x] Add tensor constants
 - [x] Add elementwise broadcasting
 - [x] Add common-subexpression elimination
-- [ ] Add algebraic simplification identities
+- [x] Add algebraic simplification identities
 - [ ] Add constant propagation through aliases
 - [ ] Add liveness analysis report
 - [ ] Add topological sorting and cycle diagnostics
