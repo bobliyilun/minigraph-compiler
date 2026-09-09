@@ -126,6 +126,22 @@ def validate(program: Iterable[dict]) -> None:
     infer_metadata(program)
 
 
+def liveness_report(program: Iterable[dict]) -> List[dict]:
+    """Return values live immediately before and after each instruction."""
+    nodes = list(program)
+    validate(nodes)
+    live = set()
+    report = []
+    for node in reversed(nodes):
+        live_after = sorted(live)
+        output = node.get("out")
+        if output is not None:
+            live.discard(output)
+        live.update(node.get("args", []))
+        report.append({"live_in": sorted(live), "live_out": live_after})
+    return list(reversed(report))
+
+
 def run(program: Iterable[dict]) -> Value:
     program = list(program)
     validate(program)

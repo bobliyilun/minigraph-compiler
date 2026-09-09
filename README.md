@@ -25,3 +25,6 @@ follow NumPy-style broadcasting: dimensions must match or one side must be
 
 `alias` creates an SSA name for one existing value. The optimizer removes alias
 chains, allowing constants to reach later folding passes.
+
+`liveness_report(program)` returns the SSA values live immediately before and
+after each instruction, which can guide later storage-reuse passes.

@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, optimize, run
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, run
 
 
 PROGRAM = [
@@ -24,6 +24,16 @@ class CompilerTests(unittest.TestCase):
     def test_dead_code_keeps_dependencies(self):
         reduced = eliminate_dead_code(PROGRAM)
         self.assertEqual([node.get("out") for node in reduced], ["x", "y", "sum", None])
+
+    def test_liveness_report_tracks_values_before_and_after_each_instruction(self):
+        report = liveness_report(PROGRAM)
+        self.assertEqual(report, [
+            {"live_in": [], "live_out": ["x"]},
+            {"live_in": ["x"], "live_out": ["x", "y"]},
+            {"live_in": ["x", "y"], "live_out": ["sum", "x", "y"]},
+            {"live_in": ["sum", "x", "y"], "live_out": ["sum"]},
+            {"live_in": ["sum"], "live_out": []},
+        ])
 
     def test_subtraction_and_division_fold(self):
         program = [

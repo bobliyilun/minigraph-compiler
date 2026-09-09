@@ -12,7 +12,7 @@
 - [x] Add common-subexpression elimination
 - [x] Add algebraic simplification identities
 - [x] Add constant propagation through aliases
-- [ ] Add liveness analysis report
+- [x] Add liveness analysis report
 - [ ] Add topological sorting and cycle diagnostics
 - [ ] Add pass-manager fixed-point tracing
 - [ ] Add textual IR parser and printer
