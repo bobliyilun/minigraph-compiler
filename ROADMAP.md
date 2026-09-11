@@ -13,7 +13,7 @@
 - [x] Add algebraic simplification identities
 - [x] Add constant propagation through aliases
 - [x] Add liveness analysis report
-- [ ] Add topological sorting and cycle diagnostics
+- [x] Add topological sorting and cycle diagnostics
 - [ ] Add pass-manager fixed-point tracing
 - [ ] Add textual IR parser and printer
 - [ ] Add Graphviz export

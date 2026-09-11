@@ -28,3 +28,7 @@ chains, allowing constants to reach later folding passes.
 
 `liveness_report(program)` returns the SSA values live immediately before and
 after each instruction, which can guide later storage-reuse passes.
+
+`topological_sort(program)` orders a valid dependency graph even when its
+instructions are supplied out of order. Cycles are rejected with the involved
+SSA names, such as `cycle detected: x -> y -> x`.

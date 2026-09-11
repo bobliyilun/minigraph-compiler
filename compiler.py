@@ -126,6 +126,51 @@ def validate(program: Iterable[dict]) -> None:
     infer_metadata(program)
 
 
+def topological_sort(program: Iterable[dict]) -> Program:
+    """Return a stable dependency order, rejecting cycles with their SSA path."""
+    nodes = list(program)
+    producers = {}
+    for index, node in enumerate(nodes):
+        output = node.get("out")
+        if output is not None:
+            if output in producers:
+                raise ValueError(f"duplicate output: {output}")
+            producers[output] = index
+
+    dependencies = []
+    for node in nodes:
+        node_dependencies = []
+        for name in node.get("args", []):
+            if name not in producers:
+                raise ValueError(f"use before definition: {name}")
+            node_dependencies.append(producers[name])
+        dependencies.append(node_dependencies)
+
+    ordered = []
+    visiting = []
+    visited = set()
+
+    def visit(index: int) -> None:
+        if index in visited:
+            return
+        if index in visiting:
+            start = visiting.index(index)
+            cycle = visiting[start:] + [index]
+            names = [nodes[item].get("out", "return") for item in cycle]
+            raise ValueError(f"cycle detected: {' -> '.join(names)}")
+        visiting.append(index)
+        for dependency in dependencies[index]:
+            visit(dependency)
+        visiting.pop()
+        visited.add(index)
+        ordered.append(nodes[index])
+
+    for index in range(len(nodes)):
+        visit(index)
+    validate(ordered)
+    return ordered
+
+
 def liveness_report(program: Iterable[dict]) -> List[dict]:
     """Return values live immediately before and after each instruction."""
     nodes = list(program)

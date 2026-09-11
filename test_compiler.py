@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, run
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, run, topological_sort
 
 
 PROGRAM = [
@@ -89,6 +89,26 @@ class CompilerTests(unittest.TestCase):
                 {"op": "const", "out": "x", "value": 2},
                 {"op": "return", "args": ["x"]},
             ])
+
+    def test_topological_sort_orders_forward_dependencies_stably(self):
+        unordered = [
+            {"op": "add", "out": "sum", "args": ["x", "y"]},
+            {"op": "return", "args": ["sum"]},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "const", "out": "x", "value": 2},
+        ]
+        ordered = topological_sort(unordered)
+        self.assertEqual([node.get("out") for node in ordered], ["x", "y", "sum", None])
+        self.assertEqual(run(ordered), 5.0)
+
+    def test_topological_sort_reports_ssa_cycle(self):
+        cyclic = [
+            {"op": "alias", "out": "x", "args": ["y"]},
+            {"op": "alias", "out": "y", "args": ["x"]},
+            {"op": "return", "args": ["x"]},
+        ]
+        with self.assertRaisesRegex(ValueError, "cycle detected: x -> y -> x"):
+            topological_sort(cyclic)
 
     def test_infers_scalar_shape_and_dtype(self):
         program = [
