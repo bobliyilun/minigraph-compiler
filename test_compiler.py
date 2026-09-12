@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, optimize_with_trace, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
 
 
 PROGRAM = [
@@ -13,6 +13,21 @@ PROGRAM = [
 
 
 class CompilerTests(unittest.TestCase):
+    def test_textual_ir_round_trips_constants_and_metadata(self):
+        program = [
+            {"op": "const", "out": "values", "value": [1, 2], "dtype": "float", "shape": [2]},
+            {"op": "const", "out": "limit", "value": 2},
+            {"op": "lt", "out": "result", "args": ["values", "limit"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        printed = print_textual_ir(program)
+        self.assertEqual(parse_textual_ir(printed), program)
+        self.assertEqual(run(parse_textual_ir(printed)), [True, False])
+
+    def test_textual_ir_rejects_invalid_line_with_location(self):
+        with self.assertRaisesRegex(ValueError, "line 2"):
+            parse_textual_ir("x = const 1\nthis is not IR")
+
     def test_optimization_preserves_result(self):
         optimized = optimize(PROGRAM)
         self.assertEqual(run(PROGRAM), run(optimized))

@@ -15,7 +15,7 @@
 - [x] Add liveness analysis report
 - [x] Add topological sorting and cycle diagnostics
 - [x] Add pass-manager fixed-point tracing
-- [ ] Add textual IR parser and printer
+- [x] Add textual IR parser and printer
 - [ ] Add Graphviz export
 - [ ] Add pattern-based operator fusion
 - [ ] Add memory-slot reuse analysis

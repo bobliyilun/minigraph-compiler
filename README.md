@@ -36,3 +36,8 @@ SSA names, such as `cycle detected: x -> y -> x`.
 `optimize_with_trace(program)` runs the optimizer to a fixed point and returns
 the optimized program plus one record per pass. Each record includes the pass
 name, iteration, whether it changed the IR, and node counts before and after.
+
+`parse_textual_ir(text)` and `print_textual_ir(program)` convert programs to a
+one-instruction-per-line syntax such as `sum = add x y` and `return sum`.
+Constants use JSON values; optional metadata is written as
+`dtype="float" shape=[2]`.

@@ -10,6 +10,55 @@ Value = Union[bool, float, list]
 Metadata = Tuple[Tuple[int, ...], str]
 
 
+def parse_textual_ir(text: str) -> Program:
+    """Parse one SSA instruction per line (``x = add a b`` or ``return x``)."""
+    program = []
+    for line_number, raw_line in enumerate(text.splitlines(), 1):
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        try:
+            if line.startswith("return "):
+                node = {"op": "return", "args": [line.removeprefix("return ").strip()]}
+            else:
+                output, expression = (part.strip() for part in line.split("=", 1))
+                op, arguments = expression.split(maxsplit=1)
+                if op == "const":
+                    decoder = json.JSONDecoder()
+                    value, index = decoder.raw_decode(arguments.lstrip())
+                    node = {"op": "const", "out": output, "value": value}
+                    metadata = arguments.lstrip()[index:].strip()
+                    while metadata:
+                        key, value_text = metadata.split("=", 1)
+                        key = key.strip()
+                        value, index = decoder.raw_decode(value_text.lstrip())
+                        if key not in {"dtype", "shape"}:
+                            raise ValueError(f"unknown constant metadata: {key}")
+                        node[key] = value
+                        metadata = value_text.lstrip()[index:].strip()
+                else:
+                    node = {"op": op, "out": output, "args": arguments.split()}
+            program.append(node)
+        except (ValueError, IndexError) as error:
+            raise ValueError(f"invalid textual IR on line {line_number}: {raw_line}") from error
+    validate(program)
+    return program
+
+
+def print_textual_ir(program: Iterable[dict]) -> str:
+    """Print a program in the format accepted by :func:`parse_textual_ir`."""
+    lines = []
+    for node in program:
+        if node["op"] == "return":
+            lines.append(f"return {node['args'][0]}")
+        elif node["op"] == "const":
+            metadata = "".join(f" {key}={json.dumps(node[key])}" for key in ("dtype", "shape") if key in node)
+            lines.append(f"{node['out']} = const {json.dumps(node['value'])}{metadata}")
+        else:
+            lines.append(f"{node['out']} = {node['op']} {' '.join(node['args'])}")
+    return "\n".join(lines)
+
+
 def _const_metadata(node: dict) -> Metadata:
     value = node["value"]
     shape, dtype = _value_metadata(value)
