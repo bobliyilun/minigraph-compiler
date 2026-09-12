@@ -32,3 +32,7 @@ after each instruction, which can guide later storage-reuse passes.
 `topological_sort(program)` orders a valid dependency graph even when its
 instructions are supplied out of order. Cycles are rejected with the involved
 SSA names, such as `cycle detected: x -> y -> x`.
+
+`optimize_with_trace(program)` runs the optimizer to a fixed point and returns
+the optimized program plus one record per pass. Each record includes the pass
+name, iteration, whether it changed the IR, and node counts before and after.

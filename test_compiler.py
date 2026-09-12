@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, optimize_with_trace, run, topological_sort
 
 
 PROGRAM = [
@@ -20,6 +20,20 @@ class CompilerTests(unittest.TestCase):
             {"op": "const", "out": "sum", "value": 5.0},
             {"op": "return", "args": ["sum"]},
         ])
+
+    def test_fixed_point_trace_reports_each_pass(self):
+        optimized, trace = optimize_with_trace(PROGRAM)
+        self.assertEqual(optimized, optimize(PROGRAM))
+        self.assertEqual([step["pass"] for step in trace[:5]], [
+            "common_subexpression_elimination",
+            "algebraic_simplify",
+            "constant_propagate",
+            "constant_fold",
+            "eliminate_dead_code",
+        ])
+        self.assertTrue(any(step["changed"] for step in trace))
+        self.assertTrue(all(not step["changed"] for step in trace[-5:]))
+        self.assertEqual(trace[-1]["nodes_after"], len(optimized))
 
     def test_dead_code_keeps_dependencies(self):
         reduced = eliminate_dead_code(PROGRAM)

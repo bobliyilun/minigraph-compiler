@@ -312,10 +312,42 @@ def algebraic_simplify(program: Iterable[dict]) -> Program:
     return output
 
 
+PASSES = (
+    ("common_subexpression_elimination", common_subexpression_elimination),
+    ("algebraic_simplify", algebraic_simplify),
+    ("constant_propagate", constant_propagate),
+    ("constant_fold", constant_fold),
+    ("eliminate_dead_code", eliminate_dead_code),
+)
+
+
+def optimize_with_trace(program: Iterable[dict]) -> Tuple[Program, List[dict]]:
+    """Optimize to a fixed point and report each pass's effect."""
+    optimized = list(program)
+    validate(optimized)
+    trace = []
+    iteration = 0
+    while True:
+        iteration += 1
+        changed = False
+        for name, optimization_pass in PASSES:
+            updated = optimization_pass(optimized)
+            pass_changed = updated != optimized
+            trace.append({
+                "iteration": iteration,
+                "pass": name,
+                "changed": pass_changed,
+                "nodes_before": len(optimized),
+                "nodes_after": len(updated),
+            })
+            changed |= pass_changed
+            optimized = updated
+        if not changed:
+            return optimized, trace
+
+
 def optimize(program: Iterable[dict]) -> Program:
-    program = list(program)
-    validate(program)
-    return eliminate_dead_code(constant_fold(constant_propagate(algebraic_simplify(common_subexpression_elimination(program)))))
+    return optimize_with_trace(program)[0]
 
 
 def main() -> None:
