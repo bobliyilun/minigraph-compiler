@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, graphviz_export, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
 
 
 PROGRAM = [
@@ -13,6 +13,22 @@ PROGRAM = [
 
 
 class CompilerTests(unittest.TestCase):
+    def test_graphviz_export_emits_dependency_edges_and_return_node(self):
+        dot = graphviz_export(PROGRAM)
+        self.assertEqual(dot, """digraph program {
+  rankdir=LR;
+  \"x\" [label=\"x = const\"];
+  \"y\" [label=\"y = const\"];
+  \"sum\" [label=\"sum = add\"];
+  \"x\" -> \"sum\";
+  \"y\" -> \"sum\";
+  \"unused\" [label=\"unused = mul\"];
+  \"x\" -> \"unused\";
+  \"y\" -> \"unused\";
+  \"return_4\" [label=\"return\"];
+  \"sum\" -> \"return_4\";
+}""")
+
     def test_textual_ir_round_trips_constants_and_metadata(self):
         program = [
             {"op": "const", "out": "values", "value": [1, 2], "dtype": "float", "shape": [2]},

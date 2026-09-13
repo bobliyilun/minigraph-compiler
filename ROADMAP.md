@@ -16,7 +16,7 @@
 - [x] Add topological sorting and cycle diagnostics
 - [x] Add pass-manager fixed-point tracing
 - [x] Add textual IR parser and printer
-- [ ] Add Graphviz export
+- [x] Add Graphviz export
 - [ ] Add pattern-based operator fusion
 - [ ] Add memory-slot reuse analysis
 - [ ] Add a simple stack-machine lowering target

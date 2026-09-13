@@ -41,3 +41,6 @@ name, iteration, whether it changed the IR, and node counts before and after.
 one-instruction-per-line syntax such as `sum = add x y` and `return sum`.
 Constants use JSON values; optional metadata is written as
 `dtype="float" shape=[2]`.
+
+`graphviz_export(program)` returns a Graphviz DOT dependency graph with one
+node per instruction and edges from each argument to its consumer.

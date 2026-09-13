@@ -59,6 +59,19 @@ def print_textual_ir(program: Iterable[dict]) -> str:
     return "\n".join(lines)
 
 
+def graphviz_export(program: Iterable[dict]) -> str:
+    """Export a validated program as a Graphviz DOT dependency graph."""
+    nodes = list(program)
+    validate(nodes)
+    lines = ["digraph program {", "  rankdir=LR;"]
+    for index, node in enumerate(nodes):
+        target = node.get("out", f"return_{index}")
+        label = "return" if node["op"] == "return" else f"{target} = {node['op']}"
+        lines.append(f"  {json.dumps(target)} [label={json.dumps(label)}];")
+        lines.extend(f"  {json.dumps(argument)} -> {json.dumps(target)};" for argument in node.get("args", []))
+    return "\n".join(lines + ["}"])
+
+
 def _const_metadata(node: dict) -> Metadata:
     value = node["value"]
     shape, dtype = _value_metadata(value)
