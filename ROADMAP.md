@@ -17,7 +17,7 @@
 - [x] Add pass-manager fixed-point tracing
 - [x] Add textual IR parser and printer
 - [x] Add Graphviz export
-- [ ] Add pattern-based operator fusion
+- [x] Add pattern-based operator fusion
 - [ ] Add memory-slot reuse analysis
 - [ ] Add a simple stack-machine lowering target
 - [ ] Publish before/after optimization examples and pass statistics

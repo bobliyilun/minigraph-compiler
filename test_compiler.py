@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, graphviz_export, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, fuse_multiply_add, graphviz_export, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
 
 
 PROGRAM = [
@@ -55,8 +55,9 @@ class CompilerTests(unittest.TestCase):
     def test_fixed_point_trace_reports_each_pass(self):
         optimized, trace = optimize_with_trace(PROGRAM)
         self.assertEqual(optimized, optimize(PROGRAM))
-        self.assertEqual([step["pass"] for step in trace[:5]], [
+        self.assertEqual([step["pass"] for step in trace[:6]], [
             "common_subexpression_elimination",
+            "fuse_multiply_add",
             "algebraic_simplify",
             "constant_propagate",
             "constant_fold",
@@ -244,6 +245,19 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual([node.get("out") for node in reduced], ["x", "y", "first", "result", None])
         self.assertEqual(reduced[-2]["args"], ["first", "first"])
         self.assertEqual(run(program), run(reduced))
+
+    def test_fuses_single_use_multiply_add(self):
+        program = [
+            {"op": "const", "out": "x", "value": 2},
+            {"op": "const", "out": "y", "value": 3},
+            {"op": "const", "out": "bias", "value": 4},
+            {"op": "mul", "out": "product", "args": ["x", "y"]},
+            {"op": "add", "out": "result", "args": ["product", "bias"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        fused = fuse_multiply_add(program)
+        self.assertEqual(fused[-2], {"op": "fma", "out": "result", "args": ["x", "y", "bias"]})
+        self.assertEqual(run(fused), run(program))
 
     def test_simplifies_arithmetic_identities_and_rewrites_uses(self):
         program = [

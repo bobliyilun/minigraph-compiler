@@ -44,3 +44,7 @@ Constants use JSON values; optional metadata is written as
 
 `graphviz_export(program)` returns a Graphviz DOT dependency graph with one
 node per instruction and edges from each argument to its consumer.
+
+The optimizer also fuses a single-use `mul` immediately followed by `add` into
+an `fma` instruction, preserving the program result while exposing a
+fused-multiply-add lowering opportunity.

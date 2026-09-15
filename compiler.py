@@ -158,6 +158,11 @@ def infer_metadata(program: Iterable[dict]) -> Dict[str, Metadata]:
             if left[1] != right[1] or left[1] != "float":
                 raise ValueError(f"arithmetic requires float inputs: {node['out']}")
             metadata[node["out"]] = _broadcast_shape(left[0], right[0]), "float"
+        elif op == "fma":
+            left, right, addend = (metadata[name] for name in node["args"])
+            if {left[1], right[1], addend[1]} != {"float"}:
+                raise ValueError(f"arithmetic requires float inputs: {node['out']}")
+            metadata[node["out"]] = _broadcast_shape(_broadcast_shape(left[0], right[0]), addend[0]), "float"
         elif op in {"eq", "lt", "gt"}:
             left, right = (metadata[name] for name in node["args"])
             if left[1] != right[1]:
@@ -260,6 +265,9 @@ def run(program: Iterable[dict]) -> Value:
         elif op in {"add", "sub", "mul", "div", "eq", "lt", "gt"}:
             left, right = (values[name] for name in node["args"])
             values[node["out"]] = _apply_binary(op, left, right)
+        elif op == "fma":
+            left, right, addend = (values[name] for name in node["args"])
+            values[node["out"]] = _apply_binary("add", _apply_binary("mul", left, right), addend)
         elif op == "select":
             condition, when_true, when_false = (values[name] for name in node["args"])
             values[node["out"]] = when_true if condition else when_false
@@ -282,6 +290,11 @@ def constant_fold(program: Iterable[dict]) -> Program:
         elif node["op"] in {"add", "sub", "mul", "div", "eq", "lt", "gt"} and all(name in constants for name in node["args"]):
             left, right = (constants[name] for name in node["args"])
             value = _apply_binary(node["op"], left, right)
+            node = {"op": "const", "out": node["out"], "value": value}
+            constants[node["out"]] = value
+        elif node["op"] == "fma" and all(name in constants for name in node["args"]):
+            left, right, addend = (constants[name] for name in node["args"])
+            value = _apply_binary("add", _apply_binary("mul", left, right), addend)
             node = {"op": "const", "out": node["out"], "value": value}
             constants[node["out"]] = value
         elif node["op"] == "select" and all(name in constants for name in node["args"]):
@@ -344,6 +357,29 @@ def common_subexpression_elimination(program: Iterable[dict]) -> Program:
     return output
 
 
+def fuse_multiply_add(program: Iterable[dict]) -> Program:
+    """Fuse a single-use ``mul`` immediately consumed by an ``add`` into ``fma``."""
+    nodes = list(program)
+    uses = {}
+    for node in nodes:
+        for name in node.get("args", []):
+            uses[name] = uses.get(name, 0) + 1
+    output = []
+    index = 0
+    while index < len(nodes):
+        node = nodes[index]
+        following = nodes[index + 1] if index + 1 < len(nodes) else None
+        product = node.get("out")
+        if node["op"] == "mul" and uses.get(product) == 1 and following and following["op"] == "add" and product in following["args"]:
+            addend = following["args"][1] if following["args"][0] == product else following["args"][0]
+            output.append({"op": "fma", "out": following["out"], "args": [*node["args"], addend]})
+            index += 2
+        else:
+            output.append(dict(node))
+            index += 1
+    return output
+
+
 def algebraic_simplify(program: Iterable[dict]) -> Program:
     """Eliminate arithmetic identities whose constant operand is scalar."""
     constants: Dict[str, Value] = {}
@@ -376,6 +412,7 @@ def algebraic_simplify(program: Iterable[dict]) -> Program:
 
 PASSES = (
     ("common_subexpression_elimination", common_subexpression_elimination),
+    ("fuse_multiply_add", fuse_multiply_add),
     ("algebraic_simplify", algebraic_simplify),
     ("constant_propagate", constant_propagate),
     ("constant_fold", constant_fold),
