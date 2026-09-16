@@ -48,3 +48,6 @@ node per instruction and edges from each argument to its consumer.
 The optimizer also fuses a single-use `mul` immediately followed by `add` into
 an `fma` instruction, preserving the program result while exposing a
 fused-multiply-add lowering opportunity.
+
+`memory_slot_reuse_analysis(program)` assigns buffer slots to live SSA values,
+reusing a slot after its prior value reaches its last use.

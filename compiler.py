@@ -254,6 +254,28 @@ def liveness_report(program: Iterable[dict]) -> List[dict]:
     return list(reversed(report))
 
 
+def memory_slot_reuse_analysis(program: Iterable[dict]) -> Dict[str, int]:
+    """Assign reusable buffer slots to SSA values that remain live after a node."""
+    nodes = list(program)
+    report = liveness_report(nodes)
+    slots: Dict[str, int] = {}
+    free_slots = set()
+    next_slot = 0
+    for node, state in zip(nodes, report):
+        live_out = set(state["live_out"])
+        for name in set(state["live_in"]) - live_out:
+            free_slots.add(slots[name])
+        output = node.get("out")
+        if output is not None and output in live_out:
+            if free_slots:
+                slots[output] = min(free_slots)
+                free_slots.remove(slots[output])
+            else:
+                slots[output] = next_slot
+                next_slot += 1
+    return slots
+
+
 def run(program: Iterable[dict]) -> Value:
     program = list(program)
     validate(program)

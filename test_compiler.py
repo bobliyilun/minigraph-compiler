@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, fuse_multiply_add, graphviz_export, infer_metadata, liveness_report, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, fuse_multiply_add, graphviz_export, infer_metadata, liveness_report, memory_slot_reuse_analysis, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
 
 
 PROGRAM = [
@@ -80,6 +80,19 @@ class CompilerTests(unittest.TestCase):
             {"live_in": ["sum", "x", "y"], "live_out": ["sum"]},
             {"live_in": ["sum"], "live_out": []},
         ])
+
+    def test_memory_slot_analysis_reuses_slots_after_last_use(self):
+        program = [
+            {"op": "const", "out": "left", "value": 2},
+            {"op": "const", "out": "right", "value": 3},
+            {"op": "add", "out": "total", "args": ["left", "right"]},
+            {"op": "const", "out": "bias", "value": 4},
+            {"op": "add", "out": "result", "args": ["total", "bias"]},
+            {"op": "return", "args": ["result"]},
+        ]
+        self.assertEqual(memory_slot_reuse_analysis(program), {
+            "left": 0, "right": 1, "total": 0, "bias": 1, "result": 0,
+        })
 
     def test_subtraction_and_division_fold(self):
         program = [
