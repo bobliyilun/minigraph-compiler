@@ -1,6 +1,6 @@
 import unittest
 
-from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, fuse_multiply_add, graphviz_export, infer_metadata, liveness_report, memory_slot_reuse_analysis, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, topological_sort
+from compiler import algebraic_simplify, common_subexpression_elimination, constant_propagate, eliminate_dead_code, fuse_multiply_add, graphviz_export, infer_metadata, liveness_report, lower_to_stack_machine, memory_slot_reuse_analysis, optimize, optimize_with_trace, parse_textual_ir, print_textual_ir, run, run_stack_machine, topological_sort
 
 
 PROGRAM = [
@@ -93,6 +93,15 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(memory_slot_reuse_analysis(program), {
             "left": 0, "right": 1, "total": 0, "bias": 1, "result": 0,
         })
+
+    def test_stack_machine_lowering_preserves_program_result(self):
+        instructions = lower_to_stack_machine(PROGRAM)
+        self.assertEqual(instructions[:7], [
+            {"op": "push_const", "value": 2}, {"op": "store", "name": "x"},
+            {"op": "push_const", "value": 3}, {"op": "store", "name": "y"},
+            {"op": "load", "name": "x"}, {"op": "load", "name": "y"}, {"op": "add"},
+        ])
+        self.assertEqual(run_stack_machine(instructions), run(PROGRAM))
 
     def test_subtraction_and_division_fold(self):
         program = [

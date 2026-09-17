@@ -19,5 +19,5 @@
 - [x] Add Graphviz export
 - [x] Add pattern-based operator fusion
 - [x] Add memory-slot reuse analysis
-- [ ] Add a simple stack-machine lowering target
+- [x] Add a simple stack-machine lowering target
 - [ ] Publish before/after optimization examples and pass statistics

@@ -51,3 +51,7 @@ fused-multiply-add lowering opportunity.
 
 `memory_slot_reuse_analysis(program)` assigns buffer slots to live SSA values,
 reusing a slot after its prior value reaches its last use.
+
+`lower_to_stack_machine(program)` emits loads, stores, and stack operations;
+`run_stack_machine(instructions)` executes that lowered target for comparison
+with the SSA interpreter.

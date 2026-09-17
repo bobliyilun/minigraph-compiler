@@ -276,6 +276,56 @@ def memory_slot_reuse_analysis(program: Iterable[dict]) -> Dict[str, int]:
     return slots
 
 
+def lower_to_stack_machine(program: Iterable[dict]) -> List[dict]:
+    """Lower SSA instructions to loads, stores, and stack operations."""
+    nodes = list(program)
+    validate(nodes)
+    instructions = []
+    binary_ops = {"add", "sub", "mul", "div", "eq", "lt", "gt"}
+    for node in nodes:
+        op = node["op"]
+        if op == "const":
+            instructions.extend(({"op": "push_const", "value": node["value"]}, {"op": "store", "name": node["out"]}))
+        elif op in binary_ops | {"fma", "select", "alias", "return"}:
+            instructions.extend({"op": "load", "name": name} for name in node["args"])
+            instructions.append({"op": op})
+            if "out" in node:
+                instructions.append({"op": "store", "name": node["out"]})
+        else:
+            raise ValueError(f"unknown op: {op}")
+    return instructions
+
+
+def run_stack_machine(instructions: Iterable[dict]) -> Value:
+    """Execute instructions emitted by :func:`lower_to_stack_machine`."""
+    stack = []
+    values: Dict[str, Value] = {}
+    for instruction in instructions:
+        op = instruction["op"]
+        if op == "push_const":
+            stack.append(_constant_value(instruction["value"]))
+        elif op == "load":
+            stack.append(values[instruction["name"]])
+        elif op == "store":
+            values[instruction["name"]] = stack.pop()
+        elif op in {"add", "sub", "mul", "div", "eq", "lt", "gt"}:
+            right, left = stack.pop(), stack.pop()
+            stack.append(_apply_binary(op, left, right))
+        elif op == "fma":
+            addend, right, left = stack.pop(), stack.pop(), stack.pop()
+            stack.append(_apply_binary("add", _apply_binary("mul", left, right), addend))
+        elif op == "select":
+            when_false, when_true, condition = stack.pop(), stack.pop(), stack.pop()
+            stack.append(when_true if condition else when_false)
+        elif op == "alias":
+            stack.append(stack.pop())
+        elif op == "return":
+            return stack.pop()
+        else:
+            raise ValueError(f"unknown stack op: {op}")
+    raise ValueError("stack program has no return")
+
+
 def run(program: Iterable[dict]) -> Value:
     program = list(program)
     validate(program)
