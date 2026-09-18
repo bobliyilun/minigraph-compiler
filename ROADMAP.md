@@ -20,4 +20,4 @@
 - [x] Add pattern-based operator fusion
 - [x] Add memory-slot reuse analysis
 - [x] Add a simple stack-machine lowering target
-- [ ] Publish before/after optimization examples and pass statistics
+- [x] Publish before/after optimization examples and pass statistics
